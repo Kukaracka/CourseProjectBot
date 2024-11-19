@@ -43,11 +43,7 @@ async def time_to_message_capture(message: Message, state=Reg.time_to_message):
 async def city_capture(message: Message, state=Reg.city):
     await state.update_data(city = message.text)
     data = await state.get_data()
-    time = data['time_to_message']
-    with open('../database/id_names_time_city.csv', 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        field = ('id', 'name', 'time', 'city')
-        writer.writerow(field)
-        writer.writerow([message.from_user.id, data['name'], time, data['city'].capitalize()])
+    res = await rq.getter_city_in_bd(message.text)
+    print(res)
     await message.answer(complete_registration)
-    await rq.set_information_about_user(message.from_user.id, data)
+    await rq.setter_user_information(message.from_user.id, data)
