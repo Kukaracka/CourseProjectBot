@@ -7,11 +7,14 @@ from config.BOT_TOKEN import token
 
 from handlers import router
 
-bot = Bot(token=token)
-dp = Dispatcher()
+from database.models import async_main
+
 
 
 async  def start_bot():
+    await async_main()
+    bot = Bot(token=token)
+    dp = Dispatcher()
     dp.include_router(router)
     await dp.start_polling(bot)
 
@@ -21,4 +24,4 @@ if __name__ == '__main__':
     try:
         asyncio.run(start_bot())
     except KeyboardInterrupt:
-        print("Exit")
+        print("Выключение бота")
