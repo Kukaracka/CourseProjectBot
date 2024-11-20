@@ -23,7 +23,8 @@ class InformationAboutUser(Base):
 class Task(Base):
     __tablename__ = "tasks"
 
-    tg_id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(primary_key=True)
+    tg_id: Mapped[int] = mapped_column()
     date: Mapped[str] = mapped_column(String(12))
     description: Mapped[str] = mapped_column(String(512))
     remind1: Mapped[bool] = mapped_column(Boolean())
@@ -36,11 +37,19 @@ class City(Base):
 
     name: Mapped[str] = mapped_column(String(64), primary_key=True)
     url: Mapped[str] = mapped_column(String(256))
+    translit: Mapped[str] = mapped_column(String(64))
+
+class ActualCity(Base):
+    __tablename__ = "actual_cities"
+
+    name: Mapped[str] = mapped_column(primary_key=True)
+    name_eng: Mapped[str] = mapped_column(String(32))
 
 
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
 
 
 

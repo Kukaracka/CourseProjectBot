@@ -1,11 +1,27 @@
 import asyncio
+import pandas as pd
 
 import requests
 from bs4 import BeautifulSoup
-import sqlite3 as sl
+from database.models import async_session
 
 import database.requests as rq
 from database.models import async_main
+
+async def parsing_data_with_city(city):
+    city_name = await rq.getter_city_name(470068887)
+    link = await rq.getter_url_from_city(city_name)
+
+    pasta = requests.get(link).text
+
+    soup = BeautifulSoup(pasta, 'lxml')
+    containers = soup.find('div').text
+
+    df = pd.read_html(link)
+    print(df)
+
+
+
 
 def filter_for_regions(hpref):
     return '/pogoda/ru-RU/region/'
@@ -13,12 +29,34 @@ def filter_for_regions(hpref):
 def filter_for_sities(hpref):
     return '/pogoda/'
 
-async def to_db(name, url):
-    await rq.setter_sity(name, url)
+async def to_db(name, url, translit):
+    await rq.setter_sity(name, url, translit)
 
 async def add_moscow():
     await rq.setter_sity('Москва', 'https://yandex.ru/pogoda/moscow')
 
+
+async def get_weather(city):
+    city_eng = await rq.getter_city_eng(city)
+    ulr = f"https://pogoda.mail.ru/prognoz/{city_eng}/extended/"
+    try:
+        r = requests.get(ulr)
+    except UnboundLocalError:
+        print(city, city_eng)
+        exit()
+    soup = BeautifulSoup(r.content, 'lxml')
+
+
+    containers = soup.find_all('div', class_='p-flex__column p-flex__column_percent-16')
+    temp = []
+    state = []
+    if containers:
+        for i in range(0, 4):
+            temp.append(containers[i].find('span', {"class": "text text_block text_bold_medium margin_bottom_10"}).text)
+            state.append(containers[i].find('span', {"class": "text text_block text_light_normal text_fixed"}).text)
+        return temp, state
+    else:
+        print(soup)
 
 def start_total_parsing():
     link_for_regions_find = "https://yandex.ru/pogoda/ru-RU/region/russia"
@@ -45,11 +83,15 @@ def start_total_parsing():
             link = sity['href']
             url = "https://yandex.ru" + link
             asyncio.run(async_main())
-            asyncio.run(to_db(name, url))
+            translit = link.split("/")[2].split("?")[0]
+            asyncio.run(to_db(name, url, translit))
+        print(region, "added")
 
     asyncio.run(async_main())
     asyncio.run(add_moscow())
 
 
 if __name__ == '__main__':
-    start_total_parsing()
+    pass
+    # start_total_parsing()
+    # get_weather("Новокузнецк")
