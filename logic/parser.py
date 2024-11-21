@@ -26,17 +26,25 @@ async def parsing_data_with_city(city):
 def filter_for_regions(hpref):
     return '/pogoda/ru-RU/region/'
 
+
 def filter_for_sities(hpref):
     return '/pogoda/'
 
-async def to_db(name, url, translit):
+
+async def added_city_to_db(name, url, translit):
     await rq.setter_sity(name, url, translit)
+
 
 async def add_moscow():
     await rq.setter_sity('Москва', 'https://yandex.ru/pogoda/moscow')
 
 
-async def get_weather(city):
+async def getter_weather(city: str) -> tuple:
+    """
+    Функция возвращает список с температурой и состоянием погоды, исходя из города
+    :param city:
+    :return:
+    """
     city_eng = await rq.getter_city_eng(city)
     ulr = f"https://pogoda.mail.ru/prognoz/{city_eng}/extended/"
     try:
@@ -57,6 +65,7 @@ async def get_weather(city):
         return temp, state
     else:
         print(soup)
+
 
 def start_total_parsing():
     link_for_regions_find = "https://yandex.ru/pogoda/ru-RU/region/russia"
@@ -84,7 +93,7 @@ def start_total_parsing():
             url = "https://yandex.ru" + link
             asyncio.run(async_main())
             translit = link.split("/")[2].split("?")[0]
-            asyncio.run(to_db(name, url, translit))
+            asyncio.run(added_city_to_db(name, url, translit))
         print(region, "added")
 
     asyncio.run(async_main())

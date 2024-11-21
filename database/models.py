@@ -45,6 +45,13 @@ class ActualCity(Base):
     name: Mapped[str] = mapped_column(primary_key=True)
     name_eng: Mapped[str] = mapped_column(String(32))
 
+class ActualWeather(Base):
+    __tablename__ = "actual_weather"
+
+    city: Mapped[str] = mapped_column(primary_key=True)
+    weather_temp: Mapped[str] = mapped_column(String(32))
+    weather_condition: Mapped[str] = mapped_column(String(32))
+
 
 async def async_main():
     async with engine.begin() as conn:

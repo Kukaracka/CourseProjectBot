@@ -1,12 +1,15 @@
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
+from aiogram.types import FSInputFile
 from aiogram import F
+import datetime
 import time
-import csv
+
+
 
 from FSM import Reg, FSMContext
 import database.requests as rq
-from parser import get_weather
+from parser import getter_weather
 
 
 from aiogram import Router
@@ -16,8 +19,8 @@ from photos_and_constant_messages.constant_messages import start_message, comple
 
 import keyboards as kb
 
-async def create_weather_list(city_name):
-    weathet_term, weather_cond = await get_weather(city_name)
+async def create_weather_list(city_name, weathet_term, weather_cond):
+    weathet_term, weather_cond = await getter_weather(city_name)
     result = (f"Утром на улице {weather_cond[0]}, {weathet_term[0]}\nДнем - {weather_cond[1]}, {weathet_term[1]}\n"
               f"Вечером - {weather_cond[2]}, {weathet_term[2]}\nНочью - {weather_cond[3]}, {weathet_term[3]}\n\n")
     return result
@@ -75,23 +78,25 @@ async def city_capture(message: Message, state=Reg.city):
     res = await rq.getter_city_in_bd(message.text)
     await message.answer(complete_registration,
                          reply_markup=kb.main_menu)
-    await rq.setter_user_information(message.from_user.id, data)
+    await rq.setter_user_information(message.from_user.id, data[0], data[1], data[2])
 
 @router.callback_query(F.data == "to_main")
 async def to_main_forward(callback: CallbackQuery):
     await callback.answer()
     user_id = callback.from_user.id
-    name = await rq.getter_city_name(user_id)
-
-    weather_mess = await create_weather_list(name)
-    data = await rq.getter_all_tasks(callback.from_user.id, all=False)
+    city_name = await rq.getter_city_name(user_id)
+    weather_term, weather_cond = await rq.getter_actual_weather_from_db(city_name)
+    weather_mess = await create_weather_list(city_name, weather_term, weather_cond)
+    data = await rq.getter_all_tasks(callback.from_user.id, is_all=False)
     mess = await generate_task_list(data)
-    await callback.message.answer_photo(photo="AgACAgIAAxkBAAICFWc9XJ5_qPu6YpMQsDx3qF4MjqvuAAJI7jEbYx7oSVsxVBPQwFS1AQADAgADeQADNgQ",
+    day, month = datetime.datetime.now().date().day, datetime.datetime.now().date().month
+    image = FSInputFile(f"../images/{callback.from_user.id}_{day}_{month}.jpg")
+
+    await callback.message.answer_photo(photo=image,
                                         caption=f"{weather_mess}"
                                                 f"Ваши задачи на сегодняшний день:\n\n{mess}",
                                         reply_markup=kb.main_menu)
     await callback.answer('Вы вернулись на главную')
-
 
 
 @router.callback_query(F.data == "new_task")
@@ -120,7 +125,7 @@ async def new_task_date(message: Message, state: NewTask.date):
 @router.callback_query(F.data == "get_all_tasks")
 async def watch_current_tasks(callback: CallbackQuery):
     await callback.answer()
-    data = await rq.getter_all_tasks(callback.from_user.id, all=True)
+    data = await rq.getter_all_tasks(callback.from_user.id, is_all=True)
     mess = await generate_task_list(data)
     await callback.message.answer(f'Вот все ваши задачи!\n\n{mess}',
                                   reply_markup=kb.to_main_from_anywhere)
