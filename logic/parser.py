@@ -3,22 +3,22 @@ import pandas as pd
 
 import requests
 from bs4 import BeautifulSoup
-from database.models import async_session
+# from database.models import async_session
 
 import database.requests as rq
 from database.models import async_main
 
-async def parsing_data_with_city(city):
-    city_name = await rq.getter_city_name(470068887)
-    link = await rq.getter_url_from_city(city_name)
-
-    pasta = requests.get(link).text
-
-    soup = BeautifulSoup(pasta, 'lxml')
-    containers = soup.find('div').text
-
-    df = pd.read_html(link)
-    print(df)
+# async def parsing_data_with_city(city):
+#     city_name = await rq.getter_city_name(470068887)
+#     link = await rq.getter_url_from_city(city_name)
+#
+#     pasta = requests.get(link).text
+#
+#     soup = BeautifulSoup(pasta, 'lxml')
+#     containers = soup.find('div').text
+#
+#     df = pd.read_html(link)
+#     print(df)
 
 
 

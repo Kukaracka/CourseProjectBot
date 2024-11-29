@@ -52,6 +52,13 @@ class ActualWeather(Base):
     weather_temp: Mapped[str] = mapped_column(String(32))
     weather_condition: Mapped[str] = mapped_column(String(32))
 
+class MessageForDelete(Base):
+    __tablename__ = "messages_for_delete"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tg_id: Mapped[int] = mapped_column()
+    message_id: Mapped[int] = mapped_column()
+
 
 async def async_main():
     async with engine.begin() as conn:

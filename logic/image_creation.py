@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 import base64
@@ -5,16 +6,15 @@ from config.API_KEYS import kadinsky_api_key, kadinsky_secret_key
 
 import requests
 
-def create_image(style, ratio, tg_id, date, weather_mean, weather_cond):
+async def create_image(style, ratio, tg_id, weather_mean, weather_cond):
     promt = f"Нарисуй человека на улице, температура {weather_mean}, {weather_cond}"
     api = Text2ImageAPI('https://api-key.fusionbrain.ai/', kadinsky_api_key, kadinsky_secret_key)
     model_id = api.get_model()
-    # uuid = api.generate("Нарисуй человека на улице, температура -9 - -8, облачно", model_id)
     uuid =  api.generate(promt, model_id, style=style, ratio=ratio)
     images = api.check_generation(uuid)
     image_base64 = images[0]
     image_data = base64.b64decode(image_base64)
-    path = f"../images/{tg_id}_{date}.jpg"
+    path = f"../images/{tg_id}.jpg"
     with open(path, "wb") as file:
         file.write(image_data)
     print(f"created to {path}")
@@ -72,5 +72,4 @@ class Text2ImageAPI:
 
 
 if __name__ == '__main__':
-    pass
-    # create_image(style=2, ratio="2:3")
+    asyncio.run(create_image(style=2, ratio="2:3", tg_id=123, weather_mean=15, weather_cond="снег"))

@@ -1,9 +1,10 @@
+import sqlalchemy
 from sqlalchemy.sql.functions import current_date
 
 from database.models import async_session
-from database.models import InformationAboutUser, Task, City, ActualCity, ActualWeather
+from database.models import InformationAboutUser, Task, City, ActualCity, ActualWeather, MessageForDelete
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_
 import asyncio
 from logic import parser
 
@@ -92,11 +93,19 @@ async def getter_all_tasks(tg_id: int, is_all: bool) -> list:
     async with async_session() as session:
         list_of_tasks = []
         temp_date = str(temp_date.day) + '.' + str(temp_date.month)
+        print(temp_date)
         if is_all:
             tasks = await session.scalars(select(Task).where(Task.tg_id == tg_id))
         else:
-            tasks = await session.scalars(select(Task).where((Task.date == temp_date) | (Task.date == "1")))
+            tasks = await session.scalars(select(Task).where(Task.tg_id == tg_id).
+                                          where(or_(Task.date == temp_date, Task.date == "1")))
+            # where(Task.date == temp_date or Task.date == "1")
+            # print(tasks.all())
+            # tasks = await tasks.where((Task.date == temp_date) or (Task.date == "1"))
+            # print(tasks)
+        print(tasks)
         for i in tasks.all():
+            print(i.date, i.description)
             list_of_tasks.append([i.date, i.description])
         await session.commit()
         return list_of_tasks
@@ -156,12 +165,12 @@ async def getter_city_eng(name: str) -> str:
     :return:
     """
     async with async_session() as session:
-        city = await session.scalar(select(City).where(City.name == name))
+        city = await session.scalar(select(City).where(City.name == name.capitalize()))
         await session.close()
     if city is not None:
         return city.translit
     else:
-        print(name)
+        raise ValueError
 
 
 async def getter_all_information(tg_id: int) -> tuple:
@@ -174,13 +183,11 @@ async def getter_all_information(tg_id: int) -> tuple:
     async with async_session() as session:
         data = await session.scalar(select(InformationAboutUser).where(InformationAboutUser.tg_id == tg_id))
         await session.close()
-        print(data)
-        return data.name, data.sity.capitalize()
+        return data.name, data.sity.capitalize(), data.time
 
 async def getter_weather_from_db(city: str) -> tuple:
     async with async_session() as session:
         data = await session.scalars(select(ActualWeather).where(ActualWeather.city == city))
-        print(data.city, data.weather_temp, data.weather_cond)
 
 async def setter_weather_from_city(city: str):
     temp = ""
@@ -194,11 +201,17 @@ async def setter_weather_from_city(city: str):
         cond = cond[:-1]
 
         if temp:
-            session.add(ActualWeather(city=city, weather_temp=temp, weather_condition=cond))
+            data = await session.scalars(select(ActualWeather).where(ActualWeather.city == city))
+            if data.all():
+                city = await session.get(ActualWeather, city)
+                city.weather_temp = temp
+                city.weather_cond = cond
+            else:
+                session.add(ActualWeather(city=city, weather_temp=temp, weather_condition=cond))
             await session.commit()
         else:
             await session.commit()
-        print('dobav')
+
 async def getter_actual_weather_from_db(city: str) -> tuple:
     async with async_session() as session:
         data = await session.scalar(select(ActualWeather).where(ActualWeather.city == city.capitalize()))
@@ -206,6 +219,39 @@ async def getter_actual_weather_from_db(city: str) -> tuple:
 
         if data:
             return data.weather_temp, data.weather_condition
+
+
+async def getter_user_id_from_time(time):
+    async with async_session() as session:
+        date = await session.scalars(select(InformationAboutUser.tg_id).where(InformationAboutUser.time == time))
+        user_id_list = []
+        for i in date:
+            user_id_list.append(i)
+        await session.close()
+        return user_id_list
+
+
+async def getter_messages_for_delete(tg_id):
+    async with async_session() as session:
+        data = await session.scalars(select(MessageForDelete).where(MessageForDelete.tg_id == tg_id))
+        # await session.scalars(select(MessageForDelete).where(MessageForDelete.tg_id == tg_id)).delete()
+        # for i in data:
+        #     await session.delete(i)
+        # messages = data.scalars().all()
+        list_of_messages = []
+        for message in data:
+            list_of_messages.append([message.tg_id, message.message_id])
+            await session.delete(message)
+
+        await session.commit()
+        return list_of_messages
+
+
+async def setter_message_for_delete(tg_id, message_id):
+    async with async_session() as session:
+        session.add(MessageForDelete(tg_id=tg_id, message_id=message_id))
+        await session.commit()
+        await session.close()
 
 
 
